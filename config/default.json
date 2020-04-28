@@ -2,7 +2,7 @@
     "name": "API",
     "port": 8085,
     "db": {
-        "url": "mongodb://47.111.155.7:27017/energy"
+        "url": "mongodb://admin:Jzjn2019@47.111.155.7:27017/energy"
     },
     "cookie":{
         "domain": "127.0.0.1",

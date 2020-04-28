@@ -1,6 +1,6 @@
 {
   "db": {
-    "url": "mongodb://10.36.132.234:27017/energy"
+    "url": "mongodb://admin:Jzjn2019@47.111.155.7:27017/energy"
   },
   "RDS":{
     "read":"{\"host\":\"47.111.155.7\",\"port\":3306,\"username\":\"root\",\"password\":\"Jzjn2019\",\"database\":\"energy\"}",
