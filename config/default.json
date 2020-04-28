@@ -1,0 +1,75 @@
+{
+    "name": "API",
+    "port": 8085,
+    "db": {
+        "url": "mongodb://47.111.155.7:27017/energy"
+    },
+    "cookie":{
+        "domain": "127.0.0.1",
+        "path": "/"
+    },
+
+    "RDS":{
+        "read":"{\"host\":\"47.111.155.7\",\"port\":3306,\"username\":\"root\",\"password\":\"Jzjn2019\",\"database\":\"energy\"}",
+        "write":"{\"host\":\"47.111.155.7\",\"port\":3306,\"username\":\"root\",\"password\":\"Jzjn2019\",\"database\":\"energy\"}"
+    },
+
+    "pingxx":{
+        "ZFT":{"appid": "pingxx_appid","key": "somekey"},
+        "EM":{"appid": "pingxx_appid2","key": "otherkey"}
+    },
+
+    "qiniu":{
+        "AccessKey": "qiniu_ak",
+        "SecretKey": "qiniu_sk"
+    },
+
+
+    "logfile": false,
+
+    "billing": false,
+
+    "defaultTokenExpire": 1209600,
+    "enableURLAuth": true,
+    "requestTimeout": 30,   //unit: seconds
+    "enableTimeout": false,     //请求超时判定
+    "enableVerify": true,       //请求验证计算
+
+    "defaultPageSize": 10,   //默认分页内容长度
+    "defaultCommandTimeout": 10, //默认传感器命令超时时间（单位：秒）
+
+    "excelCache": "cache",
+    "haiXingHeartBeat": false,
+    "nbWaterActiveReading": false,
+    "MQ":{
+        "mode": "DEVELOP",
+        "host": "47.111.155.7",
+        "port": 6379,
+        "passwd": "",
+        "enable": true
+    },
+    "redis": "redis://:Jzjn2019@47.111.155.7:6379",
+    "appservices": {
+        "host": "127.0.0.1",
+        "port": 10100
+    },
+
+    "rpc_elephantry":{
+        "ip": "127.0.0.1",
+        "port": 58303
+    },
+
+    "rpc_message":{
+        "ip": "127.0.0.1",
+        "port": 58301
+    },
+
+    "rpc_finance":{
+        "ip": "127.0.0.1",
+        "port": 58299
+    },
+    "rpc_package":{
+        "ip": "127.0.0.1",
+        "port": 58299
+    }
+}

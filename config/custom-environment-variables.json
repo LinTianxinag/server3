@@ -1,0 +1,35 @@
+{
+  "db": {
+    "url": "mongodb://10.36.132.234:27017/energy"
+  },
+  "RDS":{
+    "read":"{\"host\":\"47.111.155.7\",\"port\":3306,\"username\":\"root\",\"password\":\"Jzjn2019\",\"database\":\"energy\"}",
+    "write":"{\"host\":\"47.111.155.7\",\"port\":3306,\"username\":\"root\",\"password\":\"Jzjn2019\",\"database\":\"energy\"}"
+  },
+  "MQ":{
+    "mode": "ENV",
+    "host": "47.111.155.7",
+    "port": "6379",
+    "passwd": ""
+  },
+  "redis": "redis://:Jzjn2019@10.36.132.234:6379",
+  "appservices": {
+    "ip": "127.0.0.1"
+  },
+
+  "rpc_message":{
+    "ip": "127.0.0.1"
+  },
+
+  "rpc_elephantry":{
+    "ip": "127.0.0.1"
+  },
+
+  "rpc_finance":{
+    "ip": "127.0.0.1"
+  },
+
+  "rpc_package":{
+    "ip": "127.0.0.1"
+  }
+}
