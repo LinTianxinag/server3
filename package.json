@@ -17,7 +17,7 @@
     "include-node": "^0.2.0",
     "config": "^1.16.0",
     "underscore": "*",
-    "sequelize": "^3.30.2",
+    "sequelize": "^5.15.1",
     "moment": "^2.10.6",
     "mongoose": "^5.4.18",
     "ramda": "^0.26.1",
