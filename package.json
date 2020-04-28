@@ -16,7 +16,7 @@
     "include-node": "^0.2.0",
     "config": "^1.16.0",
     "underscore": "*",
-    "sequelize": "^3.30.2",
+    "sequelize": "^5.15.1",
     "moment": "^2.10.6",
     "ramda": "^0.26.1",
     "node-uuid": "^1.4.3",
