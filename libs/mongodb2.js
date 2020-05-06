@@ -514,6 +514,72 @@ exports.dataClientSchema = new Schema({
     //     updatedAt: true,
     // },
 });
+//将读取上来的电表进行编码，超出99要改gateway，自身的meterid也要对应
+exports.meterSchema = new Schema({
+    //当天这个文件的line值，防止重复
+    buildingId: {
+        type: String,
+        require: true,
+        default:''
+    },
+    gatewayId: {
+        type: String,
+        require: true,
+        default:''
+    },
+    //gateway 下面的电表id，从1~99 ，多了就要更换gateway
+    gatewayIndex: {
+        type: String,
+        require: true,
+        default:''
+    },
+    //归档的时候的id长度有要求
+    meterArchiveId: {
+        type: String,
+        require: true,
+        default:''
+    },
+    //采集器中meter的id 001 之类的
+    meterManagerId: {
+        type: String,
+        require: true,
+        default:''
+    },
+    meterReportId: {
+        type: String,
+        require: true,
+        default:''
+    },
+    branchId: {
+        type: String,
+        require: true,
+        default:''
+    },
+    //传感器标识
+    branchName: {
+        type: String,
+        require: true,
+        default:''
+    },
+    update: {
+        type: Date,
+        default: Date.now
+    },
+
+    itemCode: {
+        type: String,
+        default:''
+    },
+    itemName: {
+        type: String,
+        default:''
+    },
+    // timestamps:{
+    //     createdAt: true,
+    //     updatedAt: true,
+    // },
+});
+
 
 
 exports.ObjectId = ObjectId;
@@ -527,6 +593,7 @@ exports.SensorAttribute = mongo.model('sensorattribute', exports.sensorAttribute
 exports.Project = mongo.model('project', exports.projectSchema);
 exports.Building = mongo.model('building', exports.buildingSchema);
 exports.DataClient = mongo.model('dataClient', exports.dataClientSchema);
+exports.Meter = mongo.model('meter', exports.meterSchema);
 exports.NewObjectId = function()
 {
   return new mongo.Types.ObjectId;

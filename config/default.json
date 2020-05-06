@@ -13,6 +13,10 @@
         "read":"{\"host\":\"47.111.155.7\",\"port\":3306,\"username\":\"root\",\"password\":\"Jzjn2019\",\"database\":\"energy\"}",
         "write":"{\"host\":\"47.111.155.7\",\"port\":3306,\"username\":\"root\",\"password\":\"Jzjn2019\",\"database\":\"energy\"}"
     },
+    "rds":{
+        "read":"{\"host\":\"47.111.155.7\",\"port\":3306,\"username\":\"root\",\"password\":\"Jzjn2019\",\"database\":\"energy\"}",
+        "write":"{\"host\":\"47.111.155.7\",\"port\":3306,\"username\":\"root\",\"password\":\"Jzjn2019\",\"database\":\"energy\"}"
+    },
 
     "pingxx":{
         "ZFT":{"appid": "pingxx_appid","key": "somekey"},
@@ -23,8 +27,9 @@
         "AccessKey": "qiniu_ak",
         "SecretKey": "qiniu_sk"
     },
+    "mode": "RELEASE", //运行模式 RELEASE:正常模式/SIMULATE:模拟器模式(不会写入数据库)
 
-
+    "dbswitch":"mongodb",
     "logfile": false,
 
     "billing": false,

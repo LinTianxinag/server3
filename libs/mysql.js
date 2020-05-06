@@ -12,18 +12,14 @@ let sequelizeInstance;
 exports = module.exports = function(host, port, user, passwd, database, isReadOnly){
 };
 
-exports.Literal = (str)=>{
-    return sequelizeInstance.literal(str);
-};
-
 exports.Load = function () {
 
     return new Promise((resolve, reject)=>{
         sequelizeInstance = new Sequelize(null, null, null, {
             dialect: 'mysql',
             replication:{
-                read:JSON.parse(config.RDS.read),
-                write:JSON.parse(config.RDS.write)
+                read: JSON.parse(config.rds.read),
+                write: JSON.parse(config.rds.write)
             },
             logging: false,
             timezone: "+08:00",
@@ -31,14 +27,14 @@ exports.Load = function () {
                 max: 0
             },
             pool:{
-                maxConnections: 20,
+                maxConnections: 60,
                 minConnections: 10,
                 maxIdleTime: 30000
             }
         });
         sequelizeInstance.authenticate().then(
             function (err) {
-                log.info('RDS Connection Successful...');
+                console.log('RDS Connection Successful...');
                 resolve();
 
                 exports.Sequelize = sequelizeInstance;
@@ -46,7 +42,7 @@ exports.Load = function () {
                 SequelizeDefine();
             }
         ).catch(function (err) {
-            // logger.error(err);
+            console.error(err);
             reject(err);
         });
     });
@@ -60,7 +56,6 @@ exports.Exec = function(sql)
     }
 
     //判断QueryTypes
-    sql = sql.trim();
     var queryTypes;
     {
         var blankIndex = sql.indexOf(" ");
@@ -94,123 +89,11 @@ exports.Exec = function(sql)
         function (result) {
             deferred.resolve(result);
         }, function (err) {
-            log.error(err, sql);
-            deferred.resolve();
+            deferred.reject(err);
         }
     );
 
     return deferred.promise;
-};
-
-exports.ExecT = function(sql, t)
-{
-    //
-    if(!sql || !sql.length){
-        return null;
-    }
-
-    //判断QueryTypes
-    var queryTypes;
-    {
-        var blankIndex = sql.indexOf(" ");
-        var types = sql.substr(0, blankIndex);
-        switch(types){
-            case "SELECT":
-            case "select":
-                queryTypes = Sequelize.QueryTypes.SELECT;
-                break;
-            case "UPDATE":
-            case "update":
-                queryTypes = Sequelize.QueryTypes.UPDATE;
-                break;
-            case "DELETE":
-            case "delete":
-                queryTypes = Sequelize.QueryTypes.DELETE;
-                break;
-            case "INSERT":
-            case "insert":
-                queryTypes = Sequelize.QueryTypes.INSERT;
-                break;
-            default:
-                return null;
-                break;
-        }
-    }
-
-    return sequelizeInstance.query(sql, { type: queryTypes, transaction: t});
-};
-
-//交互信息
-var InteractionDetail = {
-    id: {
-        type: Sequelize.CHAR(46),
-        primaryKey: true
-    },
-    session: {
-        type: Sequelize.STRING(64),
-        defaultValue: ''
-    },
-    from: {
-        type: Sequelize.STRING(64),
-        defaultValue: ''
-    },
-    to: {
-        type: Sequelize.STRING(64),
-        defaultValue: ''
-    },
-    content: {
-        type: Sequelize.TEXT,
-        get: function(){
-            var content;
-            try{
-                content = JSON.parse(this.getDataValue('content'));
-            }
-            catch(e){
-                content = {};
-            }
-
-            return content;
-        },
-        set : function (value) {
-            this.setDataValue('content', JSON.stringify(value));
-        }
-    },
-    projectid: {
-        type: Sequelize.STRING(64)
-    },
-    timecreate: {
-        type: Sequelize.BIGINT.UNSIGNED,
-        defaultValue: 0
-    },
-    timeread: {
-        type: Sequelize.BIGINT.UNSIGNED,
-        defaultValue: 0
-    },
-    timedelete: {
-        type: Sequelize.BIGINT.UNSIGNED,
-        defaultValue: 0
-    },
-    operator: {
-        type: Sequelize.STRING(128),
-        defaultValue: ''
-    },
-    type: {
-        type: Sequelize.INTEGER.UNSIGNED,
-        defaultValue: 0
-    }
-};
-exports.SaveInteraction = (session, from, to ,content, projectid, type)=>{
-    const record = {
-        id: exports.GenerateFundID(from+to),
-        session: session,
-        from: from,
-        to: to,
-        content: content,
-        projectid: projectid,
-        type: type,
-        timecreate: moment().unix()
-    };
-    return MySQL.InteractionDetail.create(record);
 };
 
 var FundDetails;
@@ -231,161 +114,26 @@ function SequelizeDefine()
     });
     //用户表
     exports.Account = sequelizeInstance.define('account', {
-        uid:{
-            type: Sequelize.BIGINT.UNSIGNED,
-            primaryKey: true,
-            allowNull: false
-        },
         user: {
-            type: Sequelize.STRING(128),
-            defaultValue: '',
-            allowNull: false
+            type: Sequelize.CHAR(128),
+            primaryKey: true
         },
         passwd: Sequelize.STRING(255),
-        ctrlpasswd: Sequelize.STRING(8),
-        title: {
-            type: Sequelize.STRING(32),
-            defaultValue: ''
-        },
-        lastlogin: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        initpath: {
-            type: Sequelize.STRING(255),
-            defaultValue: ''
-        },
-        character: {
-            type: Sequelize.STRING(32),
-            defaultValue: ''
-        },
-        resource:{
-            type: Sequelize.TEXT,
-            get: function(){
-                var resource;
-                try{
-                    resource = JSON.parse(this.getDataValue('resource'));
-                }
-                catch(e){
-                    resource = {};
-                }
-
-                return resource;
-            },
-            set : function (value) {
-                this.setDataValue('resource', JSON.stringify(value));
-            }
-        },
-        expire: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        token: {
-            type: Sequelize.STRING(255),
-            defaultValue: ''
-        },
+        title: Sequelize.STRING(32),
+        lastlogin: Sequelize.BIGINT,
+        initpath: Sequelize.STRING(255),
+        character: Sequelize.STRING(128),
+        resource: Sequelize.TEXT,
+        expire: Sequelize.BIGINT,
+        token: Sequelize.STRING(255),
+        fundaccount: Sequelize.STRING(128),
         type: Sequelize.ENUM('USER', 'APPID'),
-        mobile: {
-            type: Sequelize.STRING(16),
-            defaultValue: ''
-        },
-        email: {
-            type: Sequelize.STRING(128),
-            defaultValue: ''
-        },
-        timecreate: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        timedelete: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        timepause: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        description: {
-            type: Sequelize.STRING(255),
-            defaultValue: ''
-        }
+        description: Sequelize.STRING(255)
     },{
         timestamps: false,
         freezeTableName: true,
         tableName: 'account'
     });
-    //用户资源权限
-    exports.AuthResource = sequelizeInstance.define('authresources', {
-        user:{
-            type: Sequelize.STRING(128),
-            primaryKey: true,
-            defaultValue: ''
-        },
-        restype:{
-            type: Sequelize.STRING(64),
-            primaryKey: true,
-            defaultValue: ''
-        },
-        value: {
-            type: Sequelize.STRING(255),
-            primaryKey: true,
-            defaultValue: ''
-        },
-        enable:{
-            type: Sequelize.BOOLEAN,
-            defaultValue: true,
-            allowNull: false
-        }
-    },{
-        timestamps: false,
-        freezeTableName: true,
-        tableName: 'authresources'
-    });
-    //用户角色
-    exports.Character = sequelizeInstance.define('character', {
-        id:{
-            type: Sequelize.STRING(64),
-            primaryKey: true
-        },
-        title: {
-            type: Sequelize.STRING(64),
-            defaultValue: ''
-        },
-        rule:{
-            type: Sequelize.TEXT,
-            get: function(){
-                let rule;
-                try{
-                    rule = JSON.parse(this.getDataValue('rule'));
-                }
-                catch(e){
-                    rule = {};
-                }
-
-                return rule;
-            }
-        },
-        level: {
-            type: Sequelize.INTEGER,
-            defaultValue: 999999
-        },
-        maxpower: {
-            type: Sequelize.INTEGER,
-            defaultValue: 999999
-        },   //最大权限
-        minpower: {
-            type: Sequelize.INTEGER,
-            defaultValue: 0
-        },   //最小权限
-        message: {
-            type: Sequelize.STRING(128),
-            defaultValue: ''
-        }
-    },{
-        timestamps: false,
-        freezeTableName: true
-    });
-
     //URL 请求表
     exports.TABLE_URLPATH = "urlpath";
     exports.UrlPath = sequelizeInstance.define('urlpath', {
@@ -393,31 +141,10 @@ function SequelizeDefine()
             type: Sequelize.STRING(255),
             primaryKey: true
         },
-        enable: {
-            type: Sequelize.BOOLEAN,
-            allowNull: false,
-            defaultValue: 0
-        },
-        needlogin: {
-            type: Sequelize.BOOLEAN,
-            allowNull: false,
-            defaultValue: 1
-        },
-        needauth: {
-            type: Sequelize.BOOLEAN,
-            allowNull: false,
-            defaultValue: 1
-        },
-        inproject:{ //是否在项目权限中启用
-            type: Sequelize.BOOLEAN,
-            allowNull: false,
-            defaultValue: 1
-        },
-        description: {
-            type: Sequelize.STRING(128),
-            allowNull: false,
-            defaultValue: ''
-        }
+        enable: Sequelize.BOOLEAN,
+        needlogin: Sequelize.BOOLEAN,
+        authtype: Sequelize.CHAR(255),
+        description: Sequelize.STRING(255)
     },{
         timestamps: false,
         freezeTableName: true,
@@ -438,38 +165,15 @@ function SequelizeDefine()
     });
     //FundAccount资金账户
     exports.FundAccount = sequelizeInstance.define('fundaccount', {
-        uid:{
+        id:{
             type: Sequelize.STRING(128),
             primaryKey: true
         },
-        cash: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        consume: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        frozen:{
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        expire: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        alerthreshold: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        timeupdate: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        },
-        timedelete: {
-            type: Sequelize.BIGINT,
-            defaultValue: 0
-        }
+        title: Sequelize.STRING(128),
+        cash: Sequelize.BIGINT,
+        consume: Sequelize.BIGINT,
+        expire: Sequelize.BIGINT,
+        alerthreshold: Sequelize.BIGINT
     },{
         timestamps: false,
         freezeTableName: true
@@ -481,48 +185,14 @@ function SequelizeDefine()
             primaryKey: true
         },
         title: Sequelize.STRING(32),
-        fundaccount: Sequelize.STRING(64),
-        enterprise: Sequelize.STRING(32), //公司名
-        billingtime: Sequelize.BIGINT.UNSIGNED,
-        billingservice: {
-            type: Boolean,
-            default: true
-        },
         level: Sequelize.INTEGER,
         energy: Sequelize.TEXT,
         onduty: Sequelize.CHAR(8),
         offduty: Sequelize.CHAR(8),
-        timecreate: Sequelize.BIGINT.UNSIGNED,
         description: Sequelize.STRING(255)
     },{
         timestamps: false,
         freezeTableName: true
-    });
-    //ProjectBuilding项目所拥有建筑
-    exports.ProjectBuildings = sequelizeInstance.define('projectbuildings', {
-        projectid:{
-            type: Sequelize.CHAR(64),
-            primaryKey: true
-        },
-        buildingid:{
-            type: Sequelize.CHAR(64),
-            primaryKey: true
-        }
-    },{
-        timestamps: false,
-        freezeTableName: true,
-        indexes:[
-            {
-                name: 'projectid',
-                method: 'BTREE',
-                fields: ['projectid']
-            },
-            {
-                name: 'buildingid',
-                method: 'BTREE',
-                fields: ['buildingid']
-            }
-        ]
     });
     //BaseEnergycategory基本能耗分类
     exports.BaseEnergyCategory = sequelizeInstance.define('baseenergycategory', {
@@ -566,7 +236,6 @@ function SequelizeDefine()
         },
         title: Sequelize.STRING(32),
         acreage: Sequelize.INTEGER,
-			  headCount: Sequelize.INTEGER,
         avgConsumption: Sequelize.DECIMAL(18,2),
         totalConsumption: Sequelize.DECIMAL(18,2),
         projectid: Sequelize.STRING(64),
@@ -692,151 +361,35 @@ function SequelizeDefine()
         freezeTableName: true
     });
     //BillingService计费服务
-    exports.BillingStrategy = sequelizeInstance.define('billingstrategy', {
+    exports.BillingService = sequelizeInstance.define('billingservice', {
         id: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            autoIncrement: true,
+            type: Sequelize.STRING(64),
             primaryKey: true
         },
         title: Sequelize.STRING(32),
-        projectid: Sequelize.STRING(64),
-        // devicetype: {
-        //     type: Sequelize.STRING(32),
-        //     defaultValue: ''
-        // },
-        // channelid:{
-        //     type: Sequelize.STRING(8),
-        //     defaultValue: ''
-        // },
-        // scope:{
-        //     type: Sequelize.STRING(8),
-        //     defaultValue: '*'
-        // },
-        rules: {
-            type: Sequelize.TEXT,
-            get: function(){
-                var rules;
-                try{
-                    rules = JSON.parse(this.getDataValue('rules'));
-                }
-                catch(e){
-                    rules = {};
-                }
-
-                return rules;
-            },
-            set : function (value) {
-                this.setDataValue('rules', JSON.stringify(value));
-            }
-        },
-        // priority: {
-        //     type: Sequelize.INTEGER,
-        //     defaultValue: 0
-        // },
-        description: Sequelize.STRING(255),
-        timecreate: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            defaultValue: 0
-        },
-        timeexpire: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            defaultValue: 0
-        }
-    },{
-        timestamps: false,
-        freezeTableName: true,
-        indexes:[
-            {
-                name: 'projectid',
-                method: 'BTREE',
-                fields: ['projectid']
-            },
-        ]
-    });
-    exports.BillingEquipLink = sequelizeInstance.define('billingequiplink', {
-        billingid: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            primaryKey: true
-        },
-        euid: {
-            type: Sequelize.STRING(128),
-            primaryKey: true
-        }
+        project: Sequelize.STRING(64),
+        energycategory: Sequelize.TEXT,
+        rules: Sequelize.TEXT,
+        description: Sequelize.STRING(255)
     },{
         timestamps: false,
         freezeTableName: true
     });
-
-
     //Department 商户表
     exports.Department = sequelizeInstance.define('department', {
-        tid: {
-            type: Sequelize.BIGINT.UNSIGNED,
+        id: {
+            type: Sequelize.STRING(64),
             primaryKey: true
         },
-        title: {
-            type: Sequelize.STRING(64),
-            defaultValue: ''
-        },
-        tag: {
-            type: Sequelize.STRING(64),
-            defaultValue: ''
-        },
-        area: Sequelize.DECIMAL(18.2),
-        onduty: { type: Sequelize.CHAR(8), defaultValue: '08:00'},
-        offduty: { type: Sequelize.CHAR(8), defaultValue: '17:00'},
-        account: {
-            type: Sequelize.STRING(128),
-            defaultValue: ''
-        },
+        title: Sequelize.STRING(32),
+        character: Sequelize.STRING(32),
+        area: Sequelize.INTEGER,
+        onduty: Sequelize.CHAR(8),
+        offduty: Sequelize.CHAR(8),
+        account: Sequelize.STRING(128),
         project: Sequelize.STRING(64),
-        timecreate: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            defaultValue: 0
-        },
-        timedelete: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            defaultValue: 0
-        },
-        timepause: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            defaultValue: 0
-        },
-        resource: {
-            type: Sequelize.TEXT,
-            get: function(){
-                var resource;
-                try{
-                    resource = JSON.parse(this.getDataValue('resource'));
-                }
-                catch(e){
-                    resource = {};
-                }
-
-                return resource;
-            },
-            set : function (value) {
-                this.setDataValue('resource', JSON.stringify(value));
-            }
-        },
-        arrearagetime: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            defaultValue: 0
-        },
-        remindercount: {
-            type: Sequelize.INTEGER,
-            defaultValue: 0
-        },    //催缴次数
-        rechargeable:{   //是否允许渠道支付(非人工充值manual)
-            type: Sequelize.BOOLEAN,
-            defaultValue: null
-        },
-        description: { type: Sequelize.STRING(255), defaultValue: ''},
-        status: {
-            type: Sequelize.INTEGER,
-            defaultValue: 0,
-            allowNull: false
-        }
+        resource: Sequelize.TEXT,
+        description: Sequelize.STRING(255)
     },{
         timestamps: false,
         freezeTableName: true
@@ -873,146 +426,25 @@ function SequelizeDefine()
         freezeTableName: true
     });
     //SensorCommandQueue 传感器命令队列
-    exports.SensorCommandQueue = sequelizeInstance.define('sensorcommandqueue', {
-        id: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            autoIncrement: true,
+    exports.DeviceCommandQueue = sequelizeInstance.define('devicecommandqueue', {
+        cmdid: {
+            type: Sequelize.STRING(64),
             primaryKey: true
         },
-        uid: {
-            type: Sequelize.STRING(16),
-            allowNull: false
-        },
-        status: {
-            type: Sequelize.STRING(8),
-            allowNull: false
-        },
-        meterid: {
-            type: Sequelize.STRING(4),
-            allowNull: false
-        },
-        buildingid: {
-            type: Sequelize.STRING(10),
-            allowNull: false
-        },
-        gatewayid: {
-            type: Sequelize.STRING(2),
-            allowNull: false
-        },
-        addrid: {
-            type: Sequelize.STRING(14),
-            allowNull: false
-        },
-        command: {
-            type: Sequelize.TEXT,
-            get: function(){
-                const command = this.getDataValue('command');
-
-                let parseJSON = {};
-                try {
-                    parseJSON = JSON.parse(command);
-                }
-                catch (e) {
-                    parseJSON = command;
-                }
-
-                return parseJSON;
-            },
-            set : function (value) {
-
-                if(typeof(value) === 'string'){
-                    this.setDataValue('command', value);
-                }
-                else {
-                    this.setDataValue('command', JSON.stringify(value));
-                }
-            }
-        },
-        retry: {
-            type: Sequelize.INTEGER,
-            allowNull: false,
-            defaultValue: 3
-        },
-        auid: {
-            type: Sequelize.STRING(128),
-            allowNull: false
-        },
-        code: {
-            type: Sequelize.INTEGER,
-            allowNull: false,
-            defaultValue: 0
-        },
-        reqdata: {
-            type: Sequelize.TEXT,
-            get: function(){
-                const reqdata = this.getDataValue('reqdata');
-                if(typeof(reqdata) === 'string'){
-                    return reqdata;
-                }
-                else {
-                    let parseJSON = {};
-                    try {
-                        parseJSON = JSON.parse(reqdata);
-                    }
-                    catch (e) {
-                        parseJSON = {};
-                    }
-
-                    return parseJSON;
-                }
-            },
-            set : function (value) {
-
-                if(typeof(value) === 'string'){
-                    this.setDataValue('reqdata', value);
-                }
-                else {
-                    this.setDataValue('reqdata', JSON.stringify(value));
-                }
-            }
-        },
-        respdata: {
-            type: Sequelize.TEXT,
-            get: function(){
-                const respdata = this.getDataValue('respdata');
-                if(typeof(respdata) === 'string'){
-                    return respdata;
-                }
-                else {
-                    let parseJSON = {};
-                    try {
-                        parseJSON = JSON.parse(respdata);
-                    }
-                    catch (e) {
-                        parseJSON = {};
-                    }
-
-                    return parseJSON;
-                }
-            },
-            set : function (value) {
-                if(typeof(value) === 'string'){
-                    this.setDataValue('respdata', value);
-                }
-                else {
-                    this.setDataValue('respdata', JSON.stringify(value));
-                }
-            }
-        },
-        timecreate: {
-            type: Sequelize.BIGINT,
-            allowNull: false
-        },
-        timeprocess: {
-            type: Sequelize.BIGINT,
-            allowNull: false,
-            defaultValue: 0
-        },
-        timedone: {
-            type: Sequelize.BIGINT,
-            allowNull: false,
-            defaultValue: 0
-        }
+        session: Sequelize.STRING(64),
+        operator: Sequelize.STRING(128),
+        buildingid: Sequelize.CHAR(4),
+        gatewayid: Sequelize.CHAR(2),
+        addrid: Sequelize.CHAR(14),
+        meterid: Sequelize.CHAR(3),
+        word: Sequelize.STRING(32),
+        auid: Sequelize.STRING(128),
+        request: Sequelize.TEXT,
+        response: Sequelize.TEXT,
+        code: Sequelize.INTEGER,
+        timecreate: Sequelize.BIGINT,
+        timeprocess: Sequelize.BIGINT,
+        timedone: Sequelize.BIGINT
     },{
         timestamps: false,
         freezeTableName: true
@@ -1128,12 +560,8 @@ function SequelizeDefine()
             type: Sequelize.STRING(128),
             primaryKey: true
         },
-        type: {
-            type: Sequelize.STRING(16),
-            primaryKey: true
-        },
-        timecreate: Sequelize.BIGINT,
-        timeexpire: Sequelize.BIGINT,
+        authtype: Sequelize.ENUM('SMS'),
+        timecreate: Sequelize.BIGINT
     },{
         timestamps: false,
         freezeTableName: true
@@ -1148,28 +576,21 @@ function SequelizeDefine()
             type: Sequelize.STRING(32)
         },
         orderno: {  //
-            type: Sequelize.STRING(64),
-            defaultValue: ''
+            type: Sequelize.STRING(64)
         },
-        from: { //来源
-            type: Sequelize.STRING(128),
-            defaultValue: ''
-        },
-        to: {
-            type: Sequelize.STRING(128),
-            defaultValue: ''
-        },
+        from: Sequelize.STRING(128),      //来源
+        to: Sequelize.STRING(128),
         project: Sequelize.STRING(64),
-        // chargeid: Sequelize.STRING(64),
+        chargeid: Sequelize.STRING(64),
         transaction: Sequelize.STRING(128), //设备编号/支付网关流水号
         channelaccount: Sequelize.BIGINT.UNSIGNED,      //渠道账户
-        amount: Sequelize.DECIMAL(18, 4),   //操作金额
-        balance: Sequelize.DECIMAL(18, 4),  //操作后的账户余额
+        amount: Sequelize.DECIMAL(18, 2),   //操作金额
+        balance: Sequelize.DECIMAL(18, 2),  //操作后的账户余额
         proposer: Sequelize.STRING(128),    //申请人
         checker: Sequelize.STRING(128),    //审核人
         operator: Sequelize.STRING(128),    //操作人
-        // subject: Sequelize.STRING(32),      //标题
-        // body: Sequelize.STRING(128),
+        subject: Sequelize.STRING(32),      //标题
+        body: Sequelize.STRING(128),
         description: Sequelize.STRING(255),
         metadata: Sequelize.TEXT,
         timecreate: {
@@ -1188,10 +609,7 @@ function SequelizeDefine()
             type: Sequelize.BIGINT,
             defaultValue: 0
         },
-        status: {
-            type: Sequelize.STRING(16),
-            defaultValue: ''
-        }
+        status: Sequelize.ENUM('CHECKING', 'PROCESSING', 'SUCCESS', 'FAILED', 'CHECKFAILED')
     },{
         timestamps: false,
         freezeTableName: true
@@ -1215,10 +633,6 @@ function SequelizeDefine()
             primaryKey: true,
             autoIncrement: true
         },
-        usefor:{
-            type: Sequelize.STRING(16),
-            defaultValue: ''
-        },
         belongto: Sequelize.STRING(64),
         flow: Sequelize.ENUM('EARNING', 'EXPENSE'),   //渠道流向('EARNING'/收入 'EXPENSE'/支出)
         name: Sequelize.STRING(64), //渠道账户名称(古鸽信息有限公司)
@@ -1236,6 +650,7 @@ function SequelizeDefine()
         },
         locate: {   //渠道地理信息
             type: Sequelize.TEXT,
+            defaultValue: '',
             get: function(){
                 var locate;
                 try{
@@ -1268,66 +683,15 @@ function SequelizeDefine()
         timecreate: Sequelize.BIGINT,   //渠道在我平台创建(申请)时间
         timeenable: Sequelize.BIGINT,   //渠道在我方验证通过时间
         timeexpire: Sequelize.BIGINT,   //渠道账户过期时间
-        setting: {   //支付appid/appsecret配置
-            type: Sequelize.TEXT,
-            get: function(){
-                var setting;
-                try{
-                    setting = JSON.parse(this.getDataValue('setting'));
-                }
-                catch(e){
-                    setting = {};
-                }
-
-                return setting;
-            },
-            set : function (value) {
-                this.setDataValue('setting', JSON.stringify(value));
-            }
-        },
-        rate: {
-            type: Sequelize.DECIMAL(10,4),
-            defaultValue: 0.0
-        },//渠道费率公式
-        share: {    //费率分摊方案{PRJ:percent, USR:percent}
-            type: Sequelize.TEXT,
-            get: function(){
-                let share;
-                try{
-                    share = JSON.parse(this.getDataValue('share'));
-                }
-                catch(e){
-                    share = {};
-                }
-
-                return share;
-            },
-            set : function (value) {
-                this.setDataValue('share', JSON.stringify(value));
-            }
-        },
-        // lower: {    //下限金额
-        //     type: Sequelize.DECIMAL(18, 2),
-        //     defaultValue: 0.0
-        // },
-        // upper: {    //上限金额
-        //     type: Sequelize.DECIMAL(18, 2),
-        //     defaultValue: 0.0
-        // },
+        rate: Sequelize.BIGINT.UNSIGNED,//渠道费率公式
+        share: Sequelize.TEXT,          //费率分摊方案{PLT:percent, PRJ:percent, USR:percent}
         amount: Sequelize.DECIMAL(18, 2),   //渠道金额
         status: {
             type: Sequelize.ENUM('FAILED', 'SUCCESS', 'CHECKING'),
             defaultValue: 'CHECKING'
         },     //状态(FAILED/未通过 SUCCESS/通过 CHECKING/审核中)
         reason: Sequelize.TEXT,
-        lock: { //锁定渠道(锁定后无法编辑)
-            type: Sequelize.BOOLEAN,
-            defaultValue: false
-        },
-        inuse: {    //渠道是否允许使用
-            type: Sequelize.BOOLEAN,
-            defaultValue: true
-        },
+        lock: Sequelize.BOOLEAN   //锁定渠道(锁定后无法编辑)
     },{
         timestamps: false,
         freezeTableName: true
@@ -1387,35 +751,12 @@ function SequelizeDefine()
             defaultValue: ''
         },
         type: {
-            type: Sequelize.STRING(16),
-            defaultValue: ''
+            type: Sequelize.ENUM('NODE','DEV'),
+            defaultValue: 'NODE'
         },
         category: {
-            type: Sequelize.STRING(32),
-            defaultValue: ''
-        },
-        formula:{
-            type: Sequelize.TEXT,
-            defaultValue: '',
-            get: function(){
-                var formula;
-                try{
-                    formula = JSON.parse(this.getDataValue('formula'));
-                }
-                catch(e){
-                    formula = {};
-                }
-
-                return formula;
-            },
-            set : function (value) {
-                this.setDataValue('formula', JSON.stringify(value));
-            }
-        },
-        enable: {
-            type: Sequelize.BOOLEAN,
-            allowNull: false,
-            defaultValue: 1,
+            type: Sequelize.ENUM('TOPOLOGY'),
+            defaultValue: 'TOPOLOGY'
         }
     },{
         timestamps: false,
@@ -1456,32 +797,20 @@ function SequelizeDefine()
             defaultValue: 0.0
         },
         //计费周期配置
-        season: {
-            type: Sequelize.BOOLEAN,
-            defaultValue: 0
-        },  //季
         month: {
             type: Sequelize.INTEGER,
             defaultValue: 0
         },  //月
-        day: {
-            type: Sequelize.INTEGER,
-            defaultValue: 0
-        },  //日
-        week: {
-            type: Sequelize.INTEGER,
-            defaultValue: 0
-        },  //周
-        hour: {
-            type: Sequelize.INTEGER,
-            defaultValue: 0
-        },  //小时
+        day: Sequelize.INTEGER,  //日
+        week: Sequelize.INTEGER,  //周
+        hour: Sequelize.INTEGER,  //小时
+        minute: Sequelize.INTEGER,  //分钟
         /*
          * 套餐类型
          * PROPERTYFEE: 物业费
          * PARKINGFEE: 停车费
          * */
-        type: Sequelize.STRING(32),
+        type: Sequelize.ENUM('PROPERTYFEE', 'PARKINGFEE'),
     }, {
         timestamps: false,
         freezeTableName: true
@@ -1512,58 +841,6 @@ function SequelizeDefine()
         timestamps: false,
         freezeTableName: true
     });
-    //账户余额缓存
-    exports.CacheAccountBalance = sequelizeInstance.define('cache_accountbalance', {
-        account: {
-            type: Sequelize.STRING(128),
-            primaryKey: true
-        },
-        time: {
-            type: Sequelize.CHAR(8),
-            primaryKey: true
-        },
-        project:{
-            type: Sequelize.STRING(64)
-        },
-        from: {
-            type: Sequelize.DECIMAL(18, 2),
-            defaultValue: 0
-        },
-        to: {
-            type: Sequelize.DECIMAL(18, 2),
-            defaultValue: 0
-        }
-    }, {
-        timestamps: false,
-        freezeTableName: true
-    });
-    //
-    exports.InteractionDetail = sequelizeInstance.define('interactiondetail',
-        InteractionDetail, {
-            timestamps: false,
-            freezeTableName: true
-        }
-    );
-    //用户权限
-    //缓存被重置的账户
-    exports.UserAuthority = sequelizeInstance.define('userauthority', {
-        uid: {
-            type: Sequelize.STRING(128),
-            primaryKey: true
-        },
-        project: {
-            type: Sequelize.STRING(64),
-            primaryKey: true
-        },
-        url:{
-            type: Sequelize.STRING(255),
-            primaryKey: true
-        },
-        enable: Sequelize.BOOLEAN
-    }, {
-        timestamps: false,
-        freezeTableName: true
-    });
     //数据协议
     exports.DataProtocol = sequelizeInstance.define('dataprotocol', {
         id: {
@@ -1575,6 +852,9 @@ function SequelizeDefine()
             type: Sequelize.STRING(32)
         },
         type:{
+            type: Sequelize.INTEGER
+        },
+        mType:{
             type: Sequelize.INTEGER
         },
         ext:{
@@ -1729,292 +1009,350 @@ function SequelizeDefine()
         timestamps: false,
         freezeTableName: true
     });
-    //租户历史
-    exports.ApartmentHistory= sequelizeInstance.define('apartmenthistory', {
-        contractid:{
+    //SensorCommandQueue 传感器命令队列
+    exports.SensorCommandQueue = sequelizeInstance.define('sensorcommandqueue', {
+        id: {
             type: Sequelize.BIGINT.UNSIGNED,
             autoIncrement: true,
             primaryKey: true
         },
-        uid:{   //用户ID
-            type: Sequelize.BIGINT.UNSIGNED,
-            allowNull: false,
-            primaryKey: true
+        uid: {
+            type: Sequelize.STRING(16),
+            allowNull: false
         },
-        tid:{   //商铺ID
-            type: Sequelize.BIGINT.UNSIGNED,
+        status: {
+            type: Sequelize.STRING(8),
+            allowNull: false
+        },
+        meterid: {
+            type: Sequelize.STRING(4),
+            allowNull: false
+        },
+        buildingid: {
+            type: Sequelize.STRING(10),
+            allowNull: false
+        },
+        gatewayid: {
+            type: Sequelize.STRING(2),
+            allowNull: false
+        },
+        addrid: {
+            type: Sequelize.STRING(14),
+            allowNull: false
+        },
+        command: {
+            type: Sequelize.TEXT,
+            get: function(){
+                const command = this.getDataValue('command');
+
+                let parseJSON = {};
+                try {
+                    parseJSON = JSON.parse(command);
+                }
+                catch (e) {
+                    parseJSON = command;
+                }
+
+                return parseJSON;
+            },
+            set : function (value) {
+
+                if(typeof(value) === 'string'){
+                    this.setDataValue('command', value);
+                }
+                else {
+                    this.setDataValue('command', JSON.stringify(value));
+                }
+            }
+        },
+        retry: {
+            type: Sequelize.INTEGER,
+            allowNull: false
+        },
+        auid: {
+            type: Sequelize.STRING(128),
+            allowNull: false
+        },
+        code: {
+            type: Sequelize.INTEGER,
             allowNull: false,
+            defaultValue: 0
+        },
+        reqdata: {
+            type: Sequelize.TEXT,
+            get: function(){
+                const reqdata = this.getDataValue('reqdata');
+                if(typeof(reqdata) === 'string'){
+                    return reqdata;
+                }
+                else {
+                    let parseJSON = {};
+                    try {
+                        parseJSON = JSON.parse(reqdata);
+                    }
+                    catch (e) {
+                        parseJSON = {};
+                    }
+
+                    return parseJSON;
+                }
+            },
+            set : function (value) {
+
+                if(typeof(value) === 'string'){
+                    this.setDataValue('reqdata', value);
+                }
+                else {
+                    this.setDataValue('reqdata', JSON.stringify(value));
+                }
+            }
+        },
+        respdata: {
+            type: Sequelize.TEXT,
+            get: function(){
+                const respdata = this.getDataValue('respdata');
+                if(typeof(respdata) === 'string'){
+                    return respdata;
+                }
+                else {
+                    let parseJSON = {};
+                    try {
+                        parseJSON = JSON.parse(respdata);
+                    }
+                    catch (e) {
+                        parseJSON = {};
+                    }
+
+                    return parseJSON;
+                }
+            },
+            set : function (value) {
+                if(typeof(value) === 'string'){
+                    this.setDataValue('respdata', value);
+                }
+                else {
+                    this.setDataValue('respdata', JSON.stringify(value));
+                }
+            }
+        },
+        timecreate: {
+            type: Sequelize.BIGINT,
+            allowNull: false
+        },
+        timeprocess: {
+            type: Sequelize.BIGINT,
+            allowNull: false,
+            defaultValue: 0
+        },
+        timedone: {
+            type: Sequelize.BIGINT,
+            allowNull: false,
+            defaultValue: 0
+        }
+    },{
+        timestamps: false,
+        freezeTableName: true
+    });
+    //
+    exports.CollectorMonitor= sequelizeInstance.define('collectormonitor', {
+        id:{
+            type: Sequelize.STRING(20),
             primaryKey: true,
-            defaultValue: 0
+            allowNull: false
         },
-        projectid:{
-            type: Sequelize.STRING(64),
-            allowNull: false,
-            defaultValue: ''
+        hardware:{
+            type: Sequelize.STRING(32),
+            defaultValue:'',
+            allowNull: false
         },
-        timefrom:{
+        software:{
+            type: Sequelize.STRING(32),
+            defaultValue:'',
+            allowNull: false
+        },
+        ip:{
+            type: Sequelize.STRING(30),
+            defaultValue: '',
+            allowNull: false
+        },
+        port:{
+            type: Sequelize.INTEGER,
+            defaultValue: 0,
+            allowNull: false
+        },
+        timecreate:{
             type: Sequelize.BIGINT.UNSIGNED,
-            allowNull: false,
-            defaultValue: 0
+            defaultValue: 0,
+            allowNull: false
         },
-        timeto:{
+        lastupdate:{
             type: Sequelize.BIGINT.UNSIGNED,
-            allowNull: false,
-            defaultValue: 0
+            defaultValue: 0,
+            allowNull: false
+        },
+        enable:{
+            type: Sequelize.BOOLEAN,
+            defaultValue: 0,
+            allowNull: false
+        },
+        ext:{
+            type: Sequelize.TEXT,
+            get: function(){
+                let ext;
+                try{
+                    ext = JSON.parse(this.getDataValue('ext'));
+                }
+                catch(e){
+                    ext = {};
+                }
+
+                return ext;
+            },
+            set : function (value) {
+                this.setDataValue('ext', JSON.stringify(value));
+            }
         }
     }, {
         timestamps: false,
         freezeTableName: true
     });
-    //用户余额缓存
-    exports.CacheUserEvent = sequelizeInstance.define('cache_userevent',{
-        uid: {
+    exports.VendorAccounts = sequelizeInstance.define('vendorAccounts', {
+        id:{
             type: Sequelize.BIGINT.UNSIGNED,
-            primaryKey: true,
-        },
-        balinsufficient:  {
-            type: Sequelize.BIGINT.UNSIGNED,
-            allowNull: false,
-            defaultValue: 0
-        },  //余额不足时间
-        arrearage:  {
-            type: Sequelize.BIGINT.UNSIGNED,
-            allowNull: false,
-            defaultValue: 0
-        },  //欠费时间
-        remind:  {
-            type: Sequelize.BIGINT.UNSIGNED,
-            allowNull: false,
-            defaultValue: 0
-        } //欠费提醒次数
-    });
-    //审计配置
-    exports.ProjectAuditSetting = sequelizeInstance.define('projectAuditSettings',{
-        id: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            primaryKey: true,
-            autoIncrement: true,
-        },
-        projectId:  {
-            type: Sequelize.STRING(64),
-            allowNull: false,
-        },
-        time: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            allowNull: false
-        },
-        value: {
-            type: Sequelize.TEXT,
-            get: function(){
-                let value;
-                try{
-                    value = JSON.parse(this.getDataValue('value'));
-                }
-                catch(e){
-                    value = {};
-                }
-
-                return value;
-            },
-            set : function (value) {
-                this.setDataValue('value', JSON.stringify(value));
-            }
-        }
-    }, {
-        timestamps: true,
-        paranoid: true,
-        freezeTableName: true
-    });
-
-  exports.NBReading = sequelizeInstance.define('NBReading', {
-    id:{
-      type: Sequelize.BIGINT.UNSIGNED,
-      primaryKey: true,
-      autoIncrement: true
-    },
-    content: {
-      type: Sequelize.TEXT,
-    }
-  },{
-    timestamps: true,
-    freezeTableName: true
-  });
-
-  exports.HXControlFeedback = sequelizeInstance.define('HXControlFeedback', {
-    id:{
-      type: Sequelize.BIGINT.UNSIGNED,
-      primaryKey: true,
-      autoIncrement: true
-    },
-    token: {
-      type: Sequelize.STRING(32),
-    },
-    type: {
-      type: Sequelize.STRING(10),
-      allowNull: false,
-      defaultValue: 'operation',
-      validate: { //操作返回，开关状态
-        isIn: [['operation', 'status']]
-      }
-    },
-    content: {
-      type: Sequelize.TEXT,
-    }
-  },{
-    timestamps: true,
-    freezeTableName: true
-  });
-
-  exports.VendorAccounts = sequelizeInstance.define('vendorAccounts', {
-    id:{
-      type: Sequelize.BIGINT.UNSIGNED,
-      autoIncrement:true,
-      primaryKey: true
-    },
-    projectId:{
-      type: Sequelize.BIGINT.UNSIGNED,
-      allowNull: false,
-    },
-    vendorProject:{
-      type: Sequelize.STRING(255),
-      allowNull: false,
-    },
-    loginURL:{
-      type: Sequelize.STRING(255),
-      allowNull: false,
-    },
-    username:{
-      type: Sequelize.STRING(32),
-      allowNull: false,
-    },
-    password:{
-      type: Sequelize.STRING(255),
-      allowNull: false,
-    },
-    memo:{
-      type: Sequelize.TEXT   //备注
-    },
-  },{
-    timestamps: true,
-    freezeTableName: true
-  });
-    exports.Devices = sequelizeInstance.define('devices', {
-        id: {
-            type: Sequelize.BIGINT.UNSIGNED,
-            autoIncrement: true,
+            autoIncrement:true,
             primaryKey: true
         },
-        deviceId: {
-            type: Sequelize.STRING(32),
-            allowNull: false,
-        },
-        sensor: {
-            type: Sequelize.STRING(32),
-            allowNull: false,
-        },
-        projectId: {
-            type: Sequelize.STRING(64),
-        },
-        vendorAccountId: {
+        projectId:{
             type: Sequelize.BIGINT.UNSIGNED,
             allowNull: false,
-        }
-    }, {
+        },
+        vendorProject:{
+            type: Sequelize.STRING(255),
+            allowNull: false,
+        },
+        loginURL:{
+            type: Sequelize.STRING(255),
+            allowNull: false,
+        },
+        username:{
+            type: Sequelize.STRING(32),
+            allowNull: false,
+        },
+        password:{
+            type: Sequelize.STRING(255),
+            allowNull: false,
+        },
+        memo:{
+            type: Sequelize.TEXT   //备注
+        },
+    },{
         timestamps: true,
         freezeTableName: true
     });
-    exports.Devices.belongsTo(exports.VendorAccounts, {as: 'vendorAccount'})
+    //添加对天气数据的存储。直接存储。
+    exports.weather2 = sequelizeInstance.define('weather2', {
+        id:{
+            type: Sequelize.BIGINT.UNSIGNED,
+            autoIncrement:true,
+            primaryKey: true
+        },
+        projectId:{
+            type: Sequelize.STRING(255),
+            allowNull: false,
+        },
+        uerkey:{
+            type: Sequelize.STRING(255)
+        },
+        temp:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        humi:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        dew:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        atmos:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        radia:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        windspeed:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        winddir:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        date:{
+            type: Sequelize.BIGINT.UNSIGNED
+        },
+        addtime:{
+            type: Sequelize.DATE
+        }
+    },{
+        timestamps: false,
+        freezeTableName: true,
+        tableName: 'weather2'
+    });
+    //添加对天气数据的存储。直接存储。
+    exports.airdata = sequelizeInstance.define('airdata', {
+        id:{
+            type: Sequelize.BIGINT.UNSIGNED,
+            autoIncrement:true,
+            primaryKey: true
+        },
+        projectId:{
+            type: Sequelize.STRING(255),
+            allowNull: false,
+        },
+        building:{
+            type: Sequelize.STRING(40),
+            allowNull: false,
+        },
+        sn:{
+            type: Sequelize.STRING(255),
+        },
+        mill:{
+            type: Sequelize.STRING(40),
+        },
+        temp:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        humi:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        co2:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        tvoc:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        tvoc2:{
+            type: Sequelize.FLOAT(3,3)
+        },
+        hcho:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        hcho2:{
+            type: Sequelize.FLOAT(3,3)
+        },
+        pm2d5:{
+            type: Sequelize.FLOAT(5,2)
+        },
+        pm10:{
+            type: Sequelize.FLOAT(5,2)
+        },
 
-  exports.Modules = sequelizeInstance.define(
-    'modules', {
-      id: {    //
-        type: Sequelize.BIGINT.UNSIGNED,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      projectId: {  //
-        type: Sequelize.STRING(46),
-        allowNull: false,
-      },
-      module: {
-        type: Sequelize.ENUM,
-        values: [
-            'dashboard',                     //'首页',
-            'analysis',                    //  '综合分析',
-            'devices',                    //  '设备管理',
-            'map',                    //  '能耗地图',
-            'grid_monitor',                    //  '电网监控',
-            'water_monitor',                    //  '水网监控',
-            'statistics',                    //  '统计报表',
-            'presentation',                    //  '首页投屏',
-            'information',                    //  '信息概览',
-            'building',                    //  '建筑管理',
-            'account',                    //  '账号管理',
-            'collector',                    //  '管理器',
-            'billingservice',                    //  '计费策略',
-            'byitem',                    //  '分项用能',
-            'node',                    //  '建筑结构',
-            'bybuilding',                    //  '建筑属性',
-            'byapart',                    //  '部门属性'
-            'analysis_energy',                    //  '能耗分析'
-            'analysis_subentry',                    //  '分项用能'
-            'analysis_daynight',                    //  '日夜间'
-            'analysis_building',                    //  '建筑分析'
-            'analysis_department'                    //  '部门分析'
-        ],
-        allowNull: false
-      }
-    }, {
-      timestamps: true,
-      paranoid: true,
-      freezeTableName: true,
+        addtime:{
+            type: Sequelize.DATE
+        }
+    },{
+        timestamps: false,
+        freezeTableName: true,
+        tableName: 'airdata'
     });
 
-  exports.Warranties = sequelizeInstance.define(
-    'warranties', {
-      id: {    //
-        type: Sequelize.BIGINT.UNSIGNED,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      projectId: {  //
-        type: Sequelize.STRING(46),
-        allowNull: false,
-      },
-      type: { //质保类型
-        type:   Sequelize.ENUM,
-        values: ['normal', 'extend'], //质保期，维保期
-        defaultValue: 'normal',
-        allowNull: false,
-      },
-      expireDate: Sequelize.DATE,
-      memo: Sequelize.TEXT //备注
-    }, {
-      timestamps: true,
-      paranoid: true,
-      freezeTableName: true,
-    });
-
-  exports.ProjectNames = sequelizeInstance.define(
-    'projectnames', {
-      id: {    //
-        type: Sequelize.BIGINT.UNSIGNED,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      pid: {  //
-        type: Sequelize.STRING(46),
-        allowNull: false,
-      },
-      title: {
-        type: Sequelize.STRING(255),
-        allowNull: false,
-      }
-    }, {
-      timestamps: true,
-      paranoid: true,
-      freezeTableName: true,
-    });
 
 }
 
@@ -2037,7 +1375,7 @@ exports.GenerateFundID = function(uid)
 function FundDetailsLog()
 {}
 //FundDetailsLog.prototype.Create = function(category, from, to, proposer, operator, project, channelAccount, details)
-FundDetailsLog.prototype.Create = function(traceid, details)
+FundDetailsLog.prototype.Create = function(details)
 {
     var deferred = Q.defer();
 
@@ -2046,7 +1384,7 @@ FundDetailsLog.prototype.Create = function(traceid, details)
     }
 
     if(!details.category || !details.category.length){
-        log.error(traceid, 'FundDetailsLog::Create category is invalid: ', details);
+        console.error('FundDetailsLog::Create category is invalid: ', details);
         return null;
     }
 
@@ -2063,10 +1401,10 @@ FundDetailsLog.prototype.Create = function(traceid, details)
         id: id,
         category: details.category,
         orderno: details.order_no || '',
-        from: from.toString(),
-        to: to.toString(),
+        from: details.from || '',
+        to: details.to || '',
         project: details.project,
-        // chargeid: details.id || '',
+        chargeid: details.id || '',
         transaction: details.transaction || '',
         channelaccount: details.channelaccount || '',
         amount: details.amount,
@@ -2074,28 +1412,27 @@ FundDetailsLog.prototype.Create = function(traceid, details)
         proposer: details.proposer,
         checker: details.checker || '',
         operator: details.operator || '',
-        // subject: details.subject || '',
-        // body: details.body,
+        subject: details.subject || '',
+        body: details.body,
         metadata: details.metadata || '',
         description: details.description || '',
         timecreate: details.timecreate || timeQuantum.unix(),
         timepaid: details.timepaid || 0,
         status: details.status || Finance.FlowStatus.Checking
     };
-    log.info(traceid, 'FundDetails create: ', createLog);
-
+    console.log('FundDetails create: ', createLog);
     exports.FundDetails.create(createLog).then(
         function (result) {
-            deferred.resolve(id);
+            deferred.resolve(result);
         }, function (err) {
-            log.error(traceid, 'FundDetailsLog Error: ', err, createLog);
+            console.error('FundDetailsLog Error: ', err, createLog);
             deferred.reject(err);
         }
     );
 
     return deferred.promise;
 };
-FundDetailsLog.prototype.Paid = function(traceid, chargeObj)
+FundDetailsLog.prototype.Paid = function(chargeObj)
 {
     var deferred = Q.defer();
 
@@ -2116,14 +1453,13 @@ FundDetailsLog.prototype.Paid = function(traceid, chargeObj)
         to: chargeObj.to
     };
 
-    log.info(traceid, 'FundDetailLog::Paid: ', paidObj, where);
+    console.debug('FundDetailLog::Paid: ', paidObj, where);
     exports.FundDetails.update(paidObj, {
         where:where
     }).then(
         function (result) {
             deferred.resolve();
         }, function (err) {
-            log.error(traceid, err, chargeObj);
             deferred.reject(err);
         }
     );
@@ -2187,6 +1523,19 @@ exports.SQLOfTotalData = function()
     return sqlArray.toString().replace(/,/g, '+')
 };
 
+//获取可计费传感器判断条件
+exports.AccumulationSensor = function ()
+{
+    var rulesSet = [];
+    var channelList = ChannelMapping.list();
+    _.each(channelList, function (channel) {
+        if(channel.isAccumulation){
+            rulesSet.push(channel.id);
+        }
+    });
+    return rulesSet;
+};
+
 /*
  * 数组转换成 SQL 语句 IN 适用的
  * */
@@ -2225,185 +1574,6 @@ exports.GenerateSQL = function(sql, queryArray)
 exports.Plain = function (data)
 {
     return data.get({plain: true})
-};
-
-/*
-* 获取能耗表
-* */
-exports.EnergyConsumptionTable = function(time)
-{
-    return "ecdaily"+time.format('YYYYMM');
-};
-/*
-* 获取原始能耗
-* */
-exports.OriginEnergyConsumptionTable = function (time) {
-    return "origindaily"+time.format('YYYYMM');
-};
-/*
- * 获取费用表
- * */
-exports.CostTable = function(time)
-{
-    return "costdaily"+time.format('YYYYMM');
-};
-
-class Paging{
-    constructor(area){
-        this.area = area;
-    }
-
-    calc(paging){
-        let lowerbound = (paging.pageindex-1) * paging.pagesize;
-        let upperbound = lowerbound + paging.pagesize;
-        let _this = this;
-        let areaPaging = [];
-
-        let i = 0;
-        for(;i<_this.area.length;i++){
-            let item = _this.area[i];
-            const v = item.count;
-            const k = item.key;
-
-            upperbound -= v;
-            if(lowerbound < v){
-                const left = v - lowerbound;
-                console.info(k, lowerbound, left);
-                areaPaging.push({
-                    key: k,
-                    offset: lowerbound,
-                    limit: left
-                });
-                if(left >= paging.pagesize){
-                    return;
-                }
-                break;
-            }
-            lowerbound -= v;
-        }
-        i++;
-
-        for(;i< _this.area.length&&upperbound;i++){
-            let item = _this.area[i];
-            const v = item.count;
-            const k = item.key;
-            if(upperbound < v){
-                console.info(k, 0, upperbound);
-                areaPaging.push({
-                    key: k,
-                    offset: 0,
-                    limit: upperbound
-                });
-                break;
-            }
-            upperbound -= v;
-            console.info(k, 0, v);
-            areaPaging.push({
-                key: k,
-                offset: 0,
-                limit: v
-            });
-        }
-
-        return areaPaging;
-    }
-}
-
-exports.QueryFundDetails = (fields, timeFrom, timeTo, where, paging, groupby, orderby)=>{
-    return new Promise((resolve, reject)=>{
-        //
-        let tablename = (time)=>{
-            return `funddetails${time.format('YYYYMM')}`;
-        };
-
-        if(!timeFrom.isValid() || !timeTo.isValid() ){
-            return reject(ErrorCode.ack(ErrorCode.TIMETYPEERROR));
-        }
-
-        if(_.isArray(fields)){
-            fields = fields.toString();
-        }
-
-        //paging info
-        if(!paging || !paging.pageindex || !paging.pagesize ){
-            return reject(ErrorCode.ack(ErrorCode.PARAMETERMISSED));
-        }
-
-        //get time
-        if(!_.isArray(where)){
-            return reject(ErrorCode.ack(ErrorCode.PARAMETERMISSED));
-        }
-
-        where.push(`timecreate between ${timeFrom.unix()} AND ${timeTo.unix()}`);
-
-
-        let buildQuery = (tablePaging)=>{
-            let queryArray = [];
-            tablePaging.map(p=>{
-                let sql = `select ${fields} from ${tablePaging.key} `;
-                sql = MySQL.GenerateSQL(sql, where);
-                if(groupby){
-                    sql += ` group by ${groupby}`;
-                }
-                if(orderby){
-                    sql += ` order by ${orderby} `;
-                }
-                sql += ` limit ${p.offset},${p.limit}`;
-                log.info(sql);
-                queryArray.push(MySQL.Exec(sql));
-            });
-            return queryArray;
-        };
-        let process = (allQuery)=>{
-            Promise.all(allQuery).then(
-                records=>{
-                    let data = [];
-                    records.map(rec=>{
-                        rec.map(r=>{
-                            data.push(r);
-                        });
-                    });
-
-                    resolve(data);
-                },err=>{
-                    log.error(err);
-                }
-
-            );
-        };
-        if(timeFrom.format('YYYYMM') != timeTo.format('YYYYMM')){
-            //跨表
-            const tableA = tablename(timeFrom);
-            const tableB = tablename(timeTo);
-            const queryA = MySQL.GenerateSQL(`select count(id) as count from ${tableA}`, where);
-            const queryB = MySQL.GenerateSQL(`select count(id) as count from ${tableB}`, where);
-
-            Promise.all([
-                MySQL.Exec(queryA),
-                MySQL.Exec(queryB),
-            ]).then(
-                result=>{
-                    let area = [
-                        {key: tableA, count: result[0][0].count},
-                        {key: tableA, count: result[0][0].count},
-                    ];
-
-                    let pagingObj = new Paging(area);
-                    let areaSeg = pagingObj.calc(paging);
-
-                    process( buildQuery(areaSeg) );
-                }
-            );
-        }
-        else{
-            //未跨表
-            let areaSeg = [
-                {key: `funddetails${timeFrom.format('YYYYMM')}`, offset: paging.pageindex, limit: paging.pagesize}
-            ];
-
-            process( buildQuery(areaSeg) );
-        }
-    });
 };
 
 exports.PERMINUTE = 'PERMINUTE';
