@@ -296,7 +296,17 @@ exports.dataClientSchema = new Schema({
         require: true,
         default:''
     },
+    newBuildingId: {
+        type: String,
+        require: true,
+        default:''
+    },
     branchId: {
+        type: String,
+        require: true,
+        default:''
+    },
+    gatewayId: {
         type: String,
         require: true,
         default:''
