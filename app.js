@@ -54,7 +54,7 @@ var signal = require('./module/driver/driver/NetDAU_Test/common/signal');
 var Message = require('./module/driver/driver/NetDAU_Test/common/message');
 var dataSaving = require('./module/driver/driver/NetDAU_Test/common/dataSaving');
 require('./libs/log')(config.name);
-var xmlTime = 60;//处理发送xml的间隔 s
+var xmlTime = 3*60;//处理发送xml的间隔 s
 var page = 1;
 var size = 100;
 var port = 8192;
