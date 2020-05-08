@@ -380,7 +380,17 @@ const transXml = (docs,meters,inputBuildingId,cb)=>{
         }
 
         setTimeout(function () {
-            readState = readEnum.READY;
+            //删除过期的数据，避免mongo数据量太大
+            MongoDB.DataClient.deleteMany({"buildingId" : inputBuildingId,"serverTime":{$lte:  moment().subtract(1, 'day')}},function (err) {
+                if(err){  //失败
+                    console.error('delete old data error,mongo:---');
+                }else{   //成功
+                    // console.log(docs);
+                    console.log('delete old data ok,mongo:---');
+                    readState = readEnum.READY;
+                }
+            })
+
         },10*1000)
 
         // dataSaving.Saving(msg.message.toString());
@@ -408,7 +418,7 @@ var dataToXml = function(docs,meters,docs1,inputBuildingId){
     var uniqueNew = [];
     var meterId = docs1.length+1;
     docs.forEach(function (item, index) {
-        console.log(item);
+        // console.log(item);
          if(!meters[item.branchId] && uniqueNew.indexOf(item.branchId) == -1){
             //找到对应gateway下面的电表数量编号，超出了就要
             if(nowMeter){
@@ -552,7 +562,7 @@ var dataToXml2 = function(docs,meters,docs1){
     var uniqueNew = [];
     var meterId = docs1.length+1;
     docs.forEach(function (item, index) {
-        console.log(item);
+        // console.log(item);
         if(!meters[item.branchId] && uniqueNew.indexOf(item.branchId) == -1){
             //找到对应gateway下面的电表数量编号，超出了就要
             if(nowMeter){
@@ -830,7 +840,7 @@ const dealData = (v)=>{
                 value:itemArr[8]
             };
             itemArrs.push(itemJson);
-            console.log(itemJson);
+            // console.log(itemJson);
 
         }else{
             console.error('item length != 9,data error');
@@ -922,7 +932,7 @@ const dealXmlData = (v)=>{
                     value:y.childNamed('function').val
                 };
                 itemArrs.push(itemJson);
-                console.log(itemJson);
+                // console.log(itemJson);
 
 
         })(metersNode);
@@ -981,6 +991,7 @@ const createServer = ()=>{
         });
 
         client_sock.on("data", function(data) {
+            console.log('data: -------------- ');
             console.log(data);
             dealData(data);
             client_sock.write("ok");
