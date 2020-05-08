@@ -1040,7 +1040,7 @@ const dealXmlData = (v)=>{
                     newBuildingId: '',//新编制的建筑id
                     branchId: y.attr?y.attr.id:'',
                     //传感器标识
-                    branchName: (wzyxyBuildName.gatewayID?wzyxyBuildName.gatewayID:gatewayID)+'-'+codeType[y.childNamed('function').attr.coding],
+                    branchName: (wzyxyBuildName[gatewayID]?wzyxyBuildName[gatewayID]:gatewayID)+'-'+codeType[y.childNamed('function').attr.coding],
                     update: '',
                     lastupdate: '',
                     gatewayId:gatewayID,
