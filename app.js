@@ -640,7 +640,7 @@ var dataToXml = function(docs,meters,docs1,inputBuildingId){
             //
             // });
         }else{
-            console.log('exit,begin to transfer');
+            // console.log('exit,begin to transfer');
         }
     })
     // 插入批量数据,如果有新的插入数据，就暂时不上传了，知道下次读取没有未记录的电表
