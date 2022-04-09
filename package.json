@@ -18,7 +18,7 @@
     "config": "^1.16.0",
     "underscore": "*",
     "sequelize": "^3.30.2",
-    "moment": "^2.10.6",
+    "moment": "^2.29.2",
     "mongoose": "^5.4.18",
     "ramda": "^0.26.1",
     "node-uuid": "^1.4.3",
